@@ -16,7 +16,7 @@ workflows:
           echo "flutter.sdk=$FLUTTER_ROOT" > android/local.properties
       - name: Get Flutter packages
         script: |
-          flutter packages pub get --no-validate-project
+          flutter packages pub get
       - name: Build Flutter APK
         script: |
           flutter build apk --release --no-shrink --android-skip-build-dependency-validation
