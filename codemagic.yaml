@@ -11,6 +11,10 @@ workflows:
       events:
         - push
     scripts:
+      - name: Recreate Flutter Android project structure
+        script: |
+          # Принудительно пересоздаем правильную структуру проекта нового формата
+          flutter create . --platforms=android --overwrite
       - name: Set up local.properties
         script: |
           echo "flutter.sdk=$FLUTTER_ROOT" > android/local.properties
@@ -19,6 +23,8 @@ workflows:
           flutter packages pub get
       - name: Build Flutter APK
         script: |
+          # Собираем APK с флагом игнорирования валидации зависимостей
           flutter build apk --release --no-shrink --android-skip-build-dependency-validation
     artifacts:
       - build/app/outputs/flutter-apk/*.apk
+
