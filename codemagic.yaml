@@ -17,8 +17,8 @@ workflows:
           mv lib/main.dart ./main.dart.bak
           mv pubspec.yaml ./pubspec.yaml.bak
           
-          # Пересоздаем структуру проекта с жестким указанием организации
-          flutter create . --platforms=android --org com.example --overwrite
+          # Пересоздаем структуру проекта с жестким указанием организации и имени проекта
+          flutter create . --platforms=android --org com.example --project-name=insp_converter --overwrite
           
           # Возвращаем наши файлы на место
           rm -f pubspec.yaml
