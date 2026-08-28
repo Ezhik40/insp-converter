@@ -13,14 +13,17 @@ workflows:
     scripts:
       - name: Recreate Flutter Android project structure
         script: |
-          # Временно прячем наш правильный main.dart, чтобы flutter create его не стер
+          # Временно прячем наши рабочие файлы, чтобы flutter create их не стер
           mv lib/main.dart ./main.dart.bak
+          mv pubspec.yaml ./pubspec.yaml.bak
           
           # Пересоздаем структуру проекта
           flutter create . --platforms=android --overwrite
           
-          # Возвращаем наш рабочий main.dart на место
+          # Возвращаем наши файлы на место с перезаписью дефолтных шаблонов
+          rm -f pubspec.yaml
           mv ./main.dart.bak lib/main.dart
+          mv ./pubspec.yaml.bak pubspec.yaml
       - name: Inject Android 16 Signing Configs
         script: |
           TARGET_FILE="android/app/build.gradle"
