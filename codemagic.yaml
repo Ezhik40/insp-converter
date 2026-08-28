@@ -13,17 +13,14 @@ workflows:
     scripts:
       - name: Recreate Flutter Android project structure
         script: |
-          # Временно прячем наши рабочие файлы, чтобы flutter create их не стер
+          # Временно прячем наши рабочие файлы, чтобы они не затерлись
           mv lib/main.dart ./main.dart.bak
           mv pubspec.yaml ./pubspec.yaml.bak
           
-          # Пересоздаем структуру проекта
-          flutter create . --platforms=android --overwrite
+          # Пересоздаем структуру проекта с жестким указанием организации
+          flutter create . --platforms=android --org com.example --overwrite
           
-          # Удаляем автосгенерированную папку с Kotlin-файлом, чтобы избежать дублирования MainActivity
-          rm -rf android/app/src/main/kotlin
-          
-          # Возвращаем наши файлы на место с перезаписью дефолтных шаблонов
+          # Возвращаем наши файлы на место
           rm -f pubspec.yaml
           mv ./main.dart.bak lib/main.dart
           mv ./pubspec.yaml.bak pubspec.yaml
