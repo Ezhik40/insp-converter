@@ -19,13 +19,31 @@ workflows:
           rm -f pubspec.yaml
           mv ./main.dart.bak lib/main.dart
           mv ./pubspec.yaml.bak pubspec.yaml
-      - name: Inject Android 16 Permissions
+      - name: Force Inject Android 16 Permissions via Gradle
         script: |
-          MANIFEST_FILE="android/app/src/main/AndroidManifest.xml"
-          if [ -f "$MANIFEST_FILE" ]; then
-            # Вставляем разрешения для работы с памятью в Android 16 сразу после тега <manifest>
-            sed -i '/<manifest/a \    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"/>\n    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"/>\n    <uses-permission android:name="android.permission.MANAGE_EXTERNAL_STORAGE"/>' "$MANIFEST_FILE"
-            echo "Разрешения для Android 16 успешно добавлены в манифест!"
+          # Вместо sed мы прописываем жесткое правило сборки: Gradle сам добавит разрешения в манифест
+          TARGET_FILE="android/app/build.gradle"
+          if [ -f "$TARGET_FILE" ]; then
+            echo -e "\nandroid { defaultConfig { manifestPlaceholders = [manifestApplicationId: \"com.example.insp_converter\"] } }" >> "$TARGET_FILE"
+            
+            # Создаем принудительный оверлей манифеста, который намертво вошьет разрешения в APK
+            MANIFEST_FILE="android/app/src/main/AndroidManifest.xml"
+            cat <<EOT > "$MANIFEST_FILE"
+            <manifest xmlns:android="http://android.com" package="com.example.insp_converter">
+                <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"/>
+                <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"/>
+                <uses-permission android:name="android.permission.MANAGE_EXTERNAL_STORAGE"/>
+                <application android:label="INSP Converter" android:icon="@mipmap/ic_launcher">
+                    <activity android:name=".MainActivity" android:exported="true" android:launchMode="singleTop" android:hardwareAccelerated="true">
+                        <intent-filter>
+                            <action android:name="android.intent.action.MAIN"/>
+                            <category android:name="android.intent.category.LAUNCHER"/>
+                        </intent-filter>
+                    </activity>
+                </application>
+            </manifest>
+            EOT
+            echo "Манифест с разрешениями для Android 16 успешно перезаписан!"
           fi
       - name: Inject Android 16 Signing Configs
         script: |
