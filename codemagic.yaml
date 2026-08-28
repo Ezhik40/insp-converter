@@ -20,6 +20,9 @@ workflows:
           # Пересоздаем структуру проекта
           flutter create . --platforms=android --overwrite
           
+          # Удаляем автосгенерированную папку с Kotlin-файлом, чтобы избежать дублирования MainActivity
+          rm -rf android/app/src/main/kotlin
+          
           # Возвращаем наши файлы на место с перезаписью дефолтных шаблонов
           rm -f pubspec.yaml
           mv ./main.dart.bak lib/main.dart
