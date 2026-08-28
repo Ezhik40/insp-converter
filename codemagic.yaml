@@ -11,25 +11,27 @@ workflows:
       events:
         - push
     scripts:
-      - name: Recreate Flutter Android project structure
+      - name: Recreate Pure Flutter Android project structure
         script: |
-          # Временно прячем наш правильный main.dart, чтобы flutter create его не стер
+          # Временно прячем наши рабочие файлы, чтобы они не затерлись
           mv lib/main.dart ./main.dart.bak
+          mv pubspec.yaml ./pubspec.yaml.bak
           
-          # Пересоздаем структуру проекта
-          flutter create . --platforms=android --overwrite
+          # Начисто создаем современную структуру проекта под новый Flutter
+          flutter create . --platforms=android --org com.ezhik --project-name=insta360_sbs_converter --overwrite
           
-          # Возвращаем наш рабочий main.dart на место
+          # Возвращаем наши файлы на место
+          rm -f pubspec.yaml
           mv ./main.dart.bak lib/main.dart
-            - name: Force Inject Android 16 Permissions and Queries via Gradle
+          mv ./pubspec.yaml.bak pubspec.yaml
+      - name: Force Inject Android 16 Permissions and Queries via Gradle
         script: |
           TARGET_FILE="android/app/build.gradle"
           if [ -f "$TARGET_FILE" ]; then
-            echo -e "\nandroid { defaultConfig { manifestPlaceholders = [manifestApplicationId: \"com.example.insp_converter\"] } }" >> "$TARGET_FILE"
-            
             MANIFEST_FILE="android/app/src/main/AndroidManifest.xml"
-            echo '<manifest xmlns:android="http://android.com" package="com.example.insp_converter">' > "$MANIFEST_FILE"
-            # Декларируем системе Android 16, что наше приложение имеет право запрашивать запуск Termux
+            
+            # Собираем чистый AndroidManifest, который жестко прописывает интент запуска Termux
+            echo '<manifest xmlns:android="http://android.com" package="com.ezhik.insta360_sbs_converter">' > "$MANIFEST_FILE"
             echo '    <queries><package android:name="com.termux" /></queries>' >> "$MANIFEST_FILE"
             echo '    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"/>' >> "$MANIFEST_FILE"
             echo '    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"/>' >> "$MANIFEST_FILE"
@@ -42,7 +44,15 @@ workflows:
             echo '        </activity>' >> "$MANIFEST_FILE"
             echo '    </application>' >> "$MANIFEST_FILE"
             echo '</manifest>' >> "$MANIFEST_FILE"
-            echo "Манифест успешно обновлен!"
+            echo "Манифест успешно собран!"
+          fi
+      - name: Inject Android 16 Signing Configs
+        script: |
+          TARGET_FILE="android/app/build.gradle"
+          if [ -f "$TARGET_FILE" ]; then
+            sed -i '/buildTypes {/i \    signingConfigs { debug { storeFile file("debug.keystore"); storePassword "android"; keyAlias "androidkey"; keyPassword "android" } }' "$TARGET_FILE"
+            sed -i '/release {/a \            signingConfig signingConfigs.debug' "$TARGET_FILE"
+            echo "Конфигурация подписи добавлена!"
           fi
       - name: Set up local.properties
         script: |
