@@ -11,45 +11,6 @@ workflows:
       events:
         - push
     scripts:
-      - name: Recreate Flutter Android project structure
-        script: |
-          mv lib/main.dart ./main.dart.bak
-          mv pubspec.yaml ./pubspec.yaml.bak
-          flutter create . --platforms=android --org com.example --project-name=insp_converter --overwrite
-          rm -f pubspec.yaml
-          mv ./main.dart.bak lib/main.dart
-          mv ./pubspec.yaml.bak pubspec.yaml
-      - name: Force Inject Android 16 Permissions via Gradle
-        script: |
-          TARGET_FILE="android/app/build.gradle"
-          if [ -f "$TARGET_FILE" ]; then
-            echo -e "\nandroid { defaultConfig { manifestPlaceholders = [manifestApplicationId: \"com.example.insp_converter\"] } }" >> "$TARGET_FILE"
-            
-            MANIFEST_FILE="android/app/src/main/AndroidManifest.xml"
-            # Записываем манифест плоскими надежными командами echo без многострочных блоков
-            echo '<manifest xmlns:android="http://android.com" package="com.example.insp_converter">' > "$MANIFEST_FILE"
-            echo '    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"/>' >> "$MANIFEST_FILE"
-            echo '    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"/>' >> "$MANIFEST_FILE"
-            echo '    <uses-permission android:name="android.permission.MANAGE_EXTERNAL_STORAGE"/>' >> "$MANIFEST_FILE"
-            echo '    <application android:label="INSP Converter" android:icon="@mipmap/ic_launcher">' >> "$MANIFEST_FILE"
-            echo '        <activity android:name=".MainActivity" android:exported="true" android:launchMode="singleTop" android:hardwareAccelerated="true">' >> "$MANIFEST_FILE"
-            echo '            <intent-filter>' >> "$MANIFEST_FILE"
-            echo '                <action android:name="android.intent.action.MAIN"/>' >> "$MANIFEST_FILE"
-            echo '                <category android:name="android.intent.category.LAUNCHER"/>' >> "$MANIFEST_FILE"
-            echo '            </intent-filter>' >> "$MANIFEST_FILE"
-            echo '        </activity>' >> "$MANIFEST_FILE"
-            echo '    </application>' >> "$MANIFEST_FILE"
-            echo '</manifest>' >> "$MANIFEST_FILE"
-            echo "Манифест с разрешениями для Android 16 успешно собран!"
-          fi
-      - name: Inject Android 16 Signing Configs
-        script: |
-          TARGET_FILE="android/app/build.gradle"
-          if [ -f "$TARGET_FILE" ]; then
-            sed -i '/buildTypes {/i \    signingConfigs { debug { storeFile file("debug.keystore"); storePassword "android"; keyAlias "androidkey"; keyPassword "android" } }' "$TARGET_FILE"
-            sed -i '/release {/a \            signingConfig signingConfigs.debug' "$TARGET_FILE"
-            echo "Конфигурация подписи добавлена!"
-          fi
       - name: Set up local.properties
         script: |
           echo "flutter.sdk=$FLUTTER_ROOT" > android/local.properties
