@@ -18,10 +18,21 @@ android {
     }
 
     defaultConfig {
-        applicationId "com.example.insp_converter"
-        minSdk 24
-        targetSdk 35
-        versionCode 1
-        versionName "1.0.0"
+    applicationId "com.example.insp_converter"
+    minSdk 24
+    targetSdk 35
+    versionCode 1
+    versionName "1.0.0"
+
+    // Фильтруем архитектуры процессора, оставляя только мобильные
+    ndk.abiFilters 'armeabi-v7a', 'arm64-v8a'
+}
+android {
+    // ... твой существующий код ...
+
+    packaging {
+        jniLibs {
+            useLegacyPackaging = true
+        }
     }
 }
