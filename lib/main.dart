@@ -1,8 +1,8 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:ffmpeg_kit_flutter_new_min_gpl/ffmpeg_kit.dart';
-import 'package:permission_handler/permission_handler.dart'; // Импортируем разрешения
 import 'package:path/path.dart' as p;
 
 void main() => runApp(MaterialApp(home: const ConverterScreen(), theme: ThemeData.dark()));
@@ -18,77 +18,57 @@ class _ConverterScreenState extends State<ConverterScreen> {
   List<File> _files = [];
   bool _loading = false;
   double _progress = 0.0;
-  String _log = 'Проверка разрешений...';
+  String _log = 'Нажмите "Сканировать", чтобы обновить список файлов';
 
   double _yaw = -0.56;
   double _pitch = 0.6;
   double _roll = -90.0;
 
+  // Канал для связи с нативной системой Android без внешних плагинов
+  static const _channel = MethodChannel('com.example.insp_converter/storage');
+
   @override
   void initState() {
     super.initState();
-    _checkAndRequestPermission(); // Проверяем доступ при запуске
+    _scanFolder(_dirPath);
   }
 
-  // Функция запроса доступа ко всем файлам для Android 16
-  Future<void> _checkAndRequestPermission() async {
-    // На Android 11+ (включая 16) нужен статус manageExternalStorage
-    var status = await Permission.manageExternalStorage.status;
-    
-    if (!status.isGranted) {
-      setState(() => _log = 'Предоставьте приложению доступ ко всем файлам в настройках');
-      // Открывает системное окно настроек "Доступ ко всем файлам"
-      var requestStatus = await Permission.manageExternalStorage.request();
-      if (requestStatus.isGranted) {
-        _autoScan();
-      } else {
-        setState(() => _log = 'Без разрешения "Доступ ко всем файлам" Android 16 блокирует чтение папок.');
-      }
-    } else {
-      _autoScan();
-    }
-  }
-
-  Future<void> _autoScan() async {
+  // Нативный запрос разрешения "Доступ ко всем файлам" для Android 16
+  Future<void> _requestStoragePermission() async {
     try {
-      final List<String> possiblePaths = [
-        '/storage/emulated/0/DCIM/Insta360',
-        '/storage/emulated/0/Download',
-      ];
-
-      String targetPath = '';
-      for (var path in possiblePaths) {
-        if (Directory(path).existsSync()) {
-          targetPath = path;
-          break;
-        }
-      }
-
-      if (targetPath.isEmpty) {
-        final dir = await getExternalStorageDirectory();
-        if (dir != null) targetPath = dir.path;
-      }
-
-      if (targetPath.isNotEmpty) {
-        _scanFolder(targetPath);
+      // Вызываем системные настройки через неявный интент в Android
+      final bool? isGranted = await _channel.invokeMethod('requestPermission');
+      if (isGranted == true) {
+        _scanFolder(_dirPath);
       }
     } catch (e) {
-      setState(() => _log = 'Ошибка сканирования: $e');
+      setState(() => _log = 'Для доступа к файлам на Android 16 зайдите в: Настройки -> Приложения -> Спец. доступ -> Доступ ко всем файлам -> Включите тумблер у INSP Converter');
     }
   }
 
-  void _scanFolder(String path) async {
-    // Перед сканированием папки вручную проверяем, одобрил ли пользователь тумблер
-    if (await Permission.manageExternalStorage.isGranted) {
-      final dir = Directory(path);
-      if (!dir.existsSync()) {
-        setState(() { _dirPath = path; _log = 'Папка не найдена по пути:\n$path'; _files = []; });
-        return;
-      }
+  void _scanFolder(String path) {
+    setState(() => _dirPath = path);
+    final dir = Directory(path);
+    
+    if (!dir.existsSync()) {
+      setState(() { 
+        _log = 'Папка не найдена или закрыта системой по пути:\n$path\n\nЕсли файлы там точно есть, нажмите кнопку ниже для настройки доступа.';
+        _files = []; 
+      });
+      return;
+    }
+
+    try {
       final inspFiles = dir.listSync().whereType<File>().where((f) => p.extension(f.path).toLowerCase() == '.insp').toList();
-      setState(() { _dirPath = path; _files = inspFiles; _log = 'Найдено файлов: ${inspFiles.length}'; });
-    } else {
-      _checkAndRequestPermission();
+      setState(() { 
+        _files = inspFiles; 
+        _log = 'Найдено файлов: ${inspFiles.length}'; 
+      });
+    } catch (e) {
+      setState(() {
+        _log = 'Android блокирует чтение папки.\nНажмите кнопку ниже, чтобы выдать разрешение в настройках телефона.';
+        _files = [];
+      });
     }
   }
 
@@ -123,6 +103,7 @@ class _ConverterScreenState extends State<ConverterScreen> {
       appBar: AppBar(title: const Text('INSP 180 SBS Converter')),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
+        key: const Key('main_padding'),
         child: Column(
           children: [
             Card(
@@ -143,16 +124,36 @@ class _ConverterScreenState extends State<ConverterScreen> {
                 ),
               ),
             ),
-            const Divider(height: 20),
+            const Divider(height: 15),
             _buildSlider('Yaw (Рыскание)', _yaw, -180, 180, (v) => setState(() => _yaw = v)),
             _buildSlider('Pitch (Тангаж)', _pitch, -90, 90, (v) => setState(() => _pitch = v)),
             _buildSlider('Roll (Крен)', _roll, -180, 180, (v) => setState(() => _roll = v)),
-            const Divider(height: 20),
+            const Divider(height: 15),
             if (_loading) ...[
               LinearProgressIndicator(value: _progress),
               const SizedBox(height: 10),
             ],
-            Expanded(child: Center(child: Text(_log, textAlign: TextAlign.center, style: const TextStyle(fontSize: 16)))),
+            Expanded(
+              child: Center(
+                child: SingleChildScrollView(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text(_log, textAlign: TextAlign.center, style: const TextStyle(fontSize: 15)),
+                      if (_files.isEmpty && !_loading) ...[
+                        const SizedBox(height: 15),
+                        ElevatedButton.icon(
+                          onPressed: _requestStoragePermission,
+                          icon: const Icon(Icons.settings),
+                          label: const Text('Выдать доступ к файлам'),
+                          style: ElevatedButton.styleFrom(backgroundColor: Colors.blueGrey),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+              ),
+            ),
             ElevatedButton(
               onPressed: (_loading || _files.isEmpty) ? null : _convert,
               style: ElevatedButton.styleFrom(backgroundColor: Colors.green, minimumSize: const Size.fromHeight(50)),
