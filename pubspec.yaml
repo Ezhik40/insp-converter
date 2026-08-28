@@ -9,7 +9,7 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-  ffmpeg_kit_flutter_new: ^1.4.0  # Используем новый поддерживаемый пакет
+  ffmpeg_kit_flutter_new_min_gpl: ^2.6.1  # Самый чистый и стабильный форк с поддержкой v360
   file_picker: ^8.1.4
   path: ^1.9.0
 
