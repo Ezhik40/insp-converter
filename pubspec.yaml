@@ -9,7 +9,7 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-  ffmpeg_kit_flutter_full: ^6.0.3
+  ffmpeg_kit_flutter_new: ^1.4.0  # Используем новый поддерживаемый пакет
   file_picker: ^8.1.4
   path: ^1.9.0
 

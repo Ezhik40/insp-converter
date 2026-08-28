@@ -1,7 +1,7 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
-import 'package:ffmpeg_kit_flutter_full/ffmpeg_kit.dart';
+import 'package:ffmpeg_kit_flutter_new/ffmpeg_kit.dart';
 import 'package:path/path.dart' as p;
 
 void main() => runApp(MaterialApp(home: const ConverterScreen(), theme: ThemeData.dark()));
