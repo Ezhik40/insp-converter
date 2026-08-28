@@ -13,16 +13,21 @@ workflows:
     scripts:
       - name: Recreate Flutter Android project structure
         script: |
-          # Принудительно пересоздаем структуру проекта
+          # Временно прячем наш правильный main.dart, чтобы flutter create его не стер
+          mv lib/main.dart ./main.dart.bak
+          
+          # Пересоздаем структуру проекта
           flutter create . --platforms=android --overwrite
+          
+          # Возвращаем наш рабочий main.dart на место
+          mv ./main.dart.bak lib/main.dart
       - name: Inject Android 16 Signing Configs
         script: |
-          # Автоматически прописываем подпись в сгенерированный build.gradle перед сборкой
           TARGET_FILE="android/app/build.gradle"
           if [ -f "$TARGET_FILE" ]; then
             sed -i '/buildTypes {/i \    signingConfigs { debug { storeFile file("debug.keystore"); storePassword "android"; keyAlias "androidkey"; keyPassword "android" } }' "$TARGET_FILE"
             sed -i '/release {/a \            signingConfig signingConfigs.debug' "$TARGET_FILE"
-            echo "Конфигурация подписи для Android 16 успешно добавлена!"
+            echo "Конфигурация подписи добавлена!"
           fi
       - name: Set up local.properties
         script: |
@@ -32,7 +37,6 @@ workflows:
           flutter packages pub get
       - name: Build Flutter APK
         script: |
-          # Собираем подписанный релизный APK
           flutter build apk --release --no-shrink --android-skip-build-dependency-validation
     artifacts:
       - build/app/outputs/flutter-apk/*.apk
