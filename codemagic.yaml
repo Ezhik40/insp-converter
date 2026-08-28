@@ -13,14 +13,9 @@ workflows:
     scripts:
       - name: Recreate Flutter Android project structure
         script: |
-          # Временно прячем наши рабочие файлы, чтобы они не затерлись
           mv lib/main.dart ./main.dart.bak
           mv pubspec.yaml ./pubspec.yaml.bak
-          
-          # Пересоздаем структуру проекта
           flutter create . --platforms=android --org com.example --project-name=insp_converter --overwrite
-          
-          # Возвращаем наши файлы на место
           rm -f pubspec.yaml
           mv ./main.dart.bak lib/main.dart
           mv ./pubspec.yaml.bak pubspec.yaml
@@ -28,18 +23,9 @@ workflows:
         script: |
           TARGET_FILE="android/app/build.gradle"
           if [ -f "$TARGET_FILE" ]; then
-            # Прописываем подпись для Android 16
             sed -i '/buildTypes {/i \    signingConfigs { debug { storeFile file("debug.keystore"); storePassword "android"; keyAlias "androidkey"; keyPassword "android" } }' "$TARGET_FILE"
             sed -i '/release {/a \            signingConfig signingConfigs.debug' "$TARGET_FILE"
             echo "Конфигурация подписи добавлена!"
-          fi
-      - name: Force Compile SDK 36 for All Subprojects
-        script: |
-          # Дописываем в корневой build.gradle хук, который насильно ставит compileSdk 36 всем плагинам (включаве file_picker)
-          ROOT_GRADLE="android/build.gradle"
-          if [ -f "$ROOT_GRADLE" ]; then
-            echo -e "\nsubprojects { subproject -> afterEvaluate { if (subproject.hasProperty('android')) { subproject.android { compileSdk 36; buildToolsVersion \"36.0.0-rc1\" } } } }" >> "$ROOT_GRADLE"
-            echo "Глобальный хук на SDK 36 успешно внедрен!"
           fi
       - name: Set up local.properties
         script: |
@@ -49,8 +35,6 @@ workflows:
           flutter packages pub get
       - name: Build Flutter APK
         script: |
-          # Прокидываем флаг игнорирования проверки AAR в свойства Gradle
-          mkdir -p android && echo "android.experimental.lifecycle.skipAarMetadataCheck=true" >> android/gradle.properties
           flutter build apk --release --no-shrink --android-skip-build-dependency-validation
     artifacts:
       - build/app/outputs/flutter-apk/*.apk
