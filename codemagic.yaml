@@ -11,6 +11,24 @@ workflows:
       events:
         - push
     scripts:
+      - name: Recreate Flutter Android project structure
+        script: |
+          # Временно прячем наш правильный main.dart, чтобы flutter create его не стер
+          mv lib/main.dart ./main.dart.bak
+          
+          # Пересоздаем структуру проекта
+          flutter create . --platforms=android --overwrite
+          
+          # Возвращаем наш рабочий main.dart на место
+          mv ./main.dart.bak lib/main.dart
+      - name: Inject Android 16 Signing Configs
+        script: |
+          TARGET_FILE="android/app/build.gradle"
+          if [ -f "$TARGET_FILE" ]; then
+            sed -i '/buildTypes {/i \    signingConfigs { debug { storeFile file("debug.keystore"); storePassword "android"; keyAlias "androidkey"; keyPassword "android" } }' "$TARGET_FILE"
+            sed -i '/release {/a \            signingConfig signingConfigs.debug' "$TARGET_FILE"
+            echo "Конфигурация подписи добавлена!"
+          fi
       - name: Set up local.properties
         script: |
           echo "flutter.sdk=$FLUTTER_ROOT" > android/local.properties
