@@ -71,7 +71,7 @@ class _ConverterScreenState extends State<ConverterScreen> {
     setState(() { _dirPath = path; _files = inspFiles; _log = 'Найдено файлов: ${inspFiles.length}'; });
   }
 
-  Future<void> _convert() async {
+    Future<void> _convert() async {
     if (_files.isEmpty) return;
     setState(() { _loading = true; _progress = 0.0; });
 
@@ -81,9 +81,8 @@ class _ConverterScreenState extends State<ConverterScreen> {
       
       setState(() => _log = 'Обработка (${i+1}/${_files.length}): ${p.basename(inP)}');
 
-      String cmd = '-i "$inP" -filter_complex "[v:0]crop=iw/2:ih:0:0,v360=input=fisheye:output=hequirect:h_fov=200:v_fov=200:yaw=0:pitch=0:roll=0[left_eye]; \
-[v:0]crop=iw/2:ih:iw/2:0,v360=input=fisheye:output=hequirect:h_fov=200:v_fov=200:yaw=$_yaw:pitch=$_pitch:roll=$_roll[right_eye]; \
-[left_eye][right_eye]hstack=inputs=2[sbs]" -map "[sbs]" -y "$outP"';
+      // Абсолютно плоская строка без переносов, чтобы Dart не путал синтаксис
+      String cmd = '-i "$inP" -filter_complex "[v:0]crop=iw/2:ih:0:0,v360=input=fisheye:output=hequirect:h_fov=200:v_fov=200:yaw=0:pitch=0:roll=0[left_eye]; [v:0]crop=iw/2:ih:iw/2:0,v360=input=fisheye:output=hequirect:h_fov=200:v_fov=200:yaw=$_yaw:pitch=$_pitch:roll=$_roll[right_eye]; [left_eye][right_eye]hstack=inputs=2[sbs]" -map "[sbs]" -y "$outP"';
 
       await FFmpegKit.execute(cmd);
       setState(() => _progress = (i + 1) / _files.length);
