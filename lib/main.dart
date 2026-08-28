@@ -2,6 +2,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:ffmpeg_kit_flutter_new_min_gpl/ffmpeg_kit.dart';
+import 'package:permission_handler/permission_handler.dart'; // Импортируем разрешения
 import 'package:path/path.dart' as p;
 
 void main() => runApp(MaterialApp(home: const ConverterScreen(), theme: ThemeData.dark()));
@@ -13,12 +14,11 @@ class ConverterScreen extends StatefulWidget {
 }
 
 class _ConverterScreenState extends State<ConverterScreen> {
-  // Обновленный абсолютный путь по умолчанию к папке Insta360
   String _dirPath = '/storage/emulated/0/DCIM/Insta360'; 
   List<File> _files = [];
   bool _loading = false;
   double _progress = 0.0;
-  String _log = 'Нажмите "Сканировать", чтобы найти файлы .insp';
+  String _log = 'Проверка разрешений...';
 
   double _yaw = -0.56;
   double _pitch = 0.6;
@@ -27,10 +27,28 @@ class _ConverterScreenState extends State<ConverterScreen> {
   @override
   void initState() {
     super.initState();
-    _autoScan();
+    _checkAndRequestPermission(); // Проверяем доступ при запуске
   }
 
-  // Автоматический поиск папки при старте приложения
+  // Функция запроса доступа ко всем файлам для Android 16
+  Future<void> _checkAndRequestPermission() async {
+    // На Android 11+ (включая 16) нужен статус manageExternalStorage
+    var status = await Permission.manageExternalStorage.status;
+    
+    if (!status.isGranted) {
+      setState(() => _log = 'Предоставьте приложению доступ ко всем файлам в настройках');
+      // Открывает системное окно настроек "Доступ ко всем файлам"
+      var requestStatus = await Permission.manageExternalStorage.request();
+      if (requestStatus.isGranted) {
+        _autoScan();
+      } else {
+        setState(() => _log = 'Без разрешения "Доступ ко всем файлам" Android 16 блокирует чтение папок.');
+      }
+    } else {
+      _autoScan();
+    }
+  }
+
   Future<void> _autoScan() async {
     try {
       final List<String> possiblePaths = [
@@ -59,14 +77,19 @@ class _ConverterScreenState extends State<ConverterScreen> {
     }
   }
 
-  void _scanFolder(String path) {
-    final dir = Directory(path);
-    if (!dir.existsSync()) {
-      setState(() { _dirPath = path; _log = 'Папка пуста или не найдена'; _files = []; });
-      return;
+  void _scanFolder(String path) async {
+    // Перед сканированием папки вручную проверяем, одобрил ли пользователь тумблер
+    if (await Permission.manageExternalStorage.isGranted) {
+      final dir = Directory(path);
+      if (!dir.existsSync()) {
+        setState(() { _dirPath = path; _log = 'Папка не найдена по пути:\n$path'; _files = []; });
+        return;
+      }
+      final inspFiles = dir.listSync().whereType<File>().where((f) => p.extension(f.path).toLowerCase() == '.insp').toList();
+      setState(() { _dirPath = path; _files = inspFiles; _log = 'Найдено файлов: ${inspFiles.length}'; });
+    } else {
+      _checkAndRequestPermission();
     }
-    final inspFiles = dir.listSync().whereType<File>().where((f) => p.extension(f.path).toLowerCase() == '.insp').toList();
-    setState(() { _dirPath = path; _files = inspFiles; _log = 'Найдено файлов: ${inspFiles.length}'; });
   }
 
   Future<void> _convert() async {
@@ -112,7 +135,6 @@ class _ConverterScreenState extends State<ConverterScreen> {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                       children: [
-                        // Обновленные кнопки с точными новыми путями
                         ElevatedButton(onPressed: () => _scanFolder('/storage/emulated/0/DCIM/Insta360'), child: const Text('Папка Insta360')),
                         ElevatedButton(onPressed: () => _scanFolder('/storage/emulated/0/Download'), child: const Text('Загрузки')),
                       ],
