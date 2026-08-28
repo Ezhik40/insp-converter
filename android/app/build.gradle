@@ -6,7 +6,7 @@ plugins {
 
 android {
     namespace "com.example.insp_converter"
-    compileSdk 35
+    compileSdk 35 // Для Android 16 возвращаем самый свежий SDK
 
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_17
@@ -18,17 +18,23 @@ android {
     }
 
     defaultConfig {
-    applicationId "com.example.insp_converter"
-    minSdk 24
-    targetSdk 35
-    versionCode 1
-    versionName "1.0.0"
+        applicationId "com.example.insp_converter"
+        minSdk 24
+        targetSdk 35
+        versionCode 1
+        versionName "1.0.0"
+        ndk.abiFilters 'armeabi-v7a', 'arm64-v8a'
+    }
 
-    // Фильтруем архитектуры процессора, оставляя только мобильные
-    ndk.abiFilters 'armeabi-v7a', 'arm64-v8a'
-}
-android {
-    // ... твой существующий код ...
+    buildTypes {
+        release {
+            // Используем стандартную отладочную подпись для релиза,
+            // чтобы Android 16 не блокировал установку «пустого» пакета
+            signingConfig signingConfigs.debug
+            minifyEnabled false
+            shrinkResources false
+        }
+    }
 
     packaging {
         jniLibs {
