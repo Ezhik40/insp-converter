@@ -13,7 +13,8 @@ class ConverterScreen extends StatefulWidget {
 }
 
 class _ConverterScreenState extends State<ConverterScreen> {
-  String _dirPath = '/sdcard/Pictures/Insta360'; // Путь по умолчанию для Insta360 на Android
+  // Обновленный абсолютный путь по умолчанию к папке Insta360
+  String _dirPath = '/storage/emulated/0/DCIM/Insta360'; 
   List<File> _files = [];
   bool _loading = false;
   double _progress = 0.0;
@@ -29,14 +30,12 @@ class _ConverterScreenState extends State<ConverterScreen> {
     _autoScan();
   }
 
-  // Автоматический поиск папки без вызова диалоговых окон
+  // Автоматический поиск папки при старте приложения
   Future<void> _autoScan() async {
     try {
-      // Пытаемся проверить стандартные пути
       final List<String> possiblePaths = [
-        '/sdcard/Pictures/Insta360',
-        '/sdcard/DCIM/Camera',
-        '/sdcard/Download',
+        '/storage/emulated/0/DCIM/Insta360',
+        '/storage/emulated/0/Download',
       ];
 
       String targetPath = '';
@@ -48,7 +47,6 @@ class _ConverterScreenState extends State<ConverterScreen> {
       }
 
       if (targetPath.isEmpty) {
-        // Если кастомные пути не найдены, берем системную папку документов
         final dir = await getExternalStorageDirectory();
         if (dir != null) targetPath = dir.path;
       }
@@ -71,7 +69,7 @@ class _ConverterScreenState extends State<ConverterScreen> {
     setState(() { _dirPath = path; _files = inspFiles; _log = 'Найдено файлов: ${inspFiles.length}'; });
   }
 
-    Future<void> _convert() async {
+  Future<void> _convert() async {
     if (_files.isEmpty) return;
     setState(() { _loading = true; _progress = 0.0; });
 
@@ -81,7 +79,6 @@ class _ConverterScreenState extends State<ConverterScreen> {
       
       setState(() => _log = 'Обработка (${i+1}/${_files.length}): ${p.basename(inP)}');
 
-      // Абсолютно плоская строка без переносов, чтобы Dart не путал синтаксис
       String cmd = '-i "$inP" -filter_complex "[v:0]crop=iw/2:ih:0:0,v360=input=fisheye:output=hequirect:h_fov=200:v_fov=200:yaw=0:pitch=0:roll=0[left_eye]; [v:0]crop=iw/2:ih:iw/2:0,v360=input=fisheye:output=hequirect:h_fov=200:v_fov=200:yaw=$_yaw:pitch=$_pitch:roll=$_roll[right_eye]; [left_eye][right_eye]hstack=inputs=2[sbs]" -map "[sbs]" -y "$outP"';
 
       await FFmpegKit.execute(cmd);
@@ -115,8 +112,9 @@ class _ConverterScreenState extends State<ConverterScreen> {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                       children: [
-                        ElevatedButton(onPressed: () => _scanFolder('/sdcard/Pictures/Insta360'), child: const Text('Папка Insta360')),
-                        ElevatedButton(onPressed: () => _scanFolder('/sdcard/Download'), child: const Text('Загрузки')),
+                        // Обновленные кнопки с точными новыми путями
+                        ElevatedButton(onPressed: () => _scanFolder('/storage/emulated/0/DCIM/Insta360'), child: const Text('Папка Insta360')),
+                        ElevatedButton(onPressed: () => _scanFolder('/storage/emulated/0/Download'), child: const Text('Загрузки')),
                       ],
                     ),
                   ],
