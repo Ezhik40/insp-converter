@@ -33,22 +33,24 @@ workflows:
             sed -i '/release {/a \            signingConfig signingConfigs.debug' "$TARGET_FILE"
             echo "Конфигурация подписи добавлена!"
           fi
-      - name: Force Global Android SDK 36 Setup
+      - name: Force Compile SDK 36 for All Subprojects
         script: |
-          # Записываем жесткие настройки SDK глобально для всего проекта во Flutter-окружение
+          # Дописываем в корневой build.gradle хук, который насильно ставит compileSdk 36 всем плагинам (включаве file_picker)
+          ROOT_GRADLE="android/build.gradle"
+          if [ -f "$ROOT_GRADLE" ]; then
+            echo -e "\nsubprojects { subproject -> afterEvaluate { if (subproject.hasProperty('android')) { subproject.android { compileSdk 36; buildToolsVersion \"36.0.0-rc1\" } } } }" >> "$ROOT_GRADLE"
+            echo "Глобальный хук на SDK 36 успешно внедрен!"
+          fi
+      - name: Set up local.properties
+        script: |
           echo "flutter.sdk=$FLUTTER_ROOT" > android/local.properties
-          echo "flutter.compileSdkVersion=36" >> android/local.properties
-          echo "flutter.targetSdkVersion=36" >> android/local.properties
-          
-          # Также прокидываем флаг игнорирования проверки AAR в свойства Gradle
-          mkdir -p android && echo "android.experimental.lifecycle.skipAarMetadataCheck=true" >> android/gradle.properties
-          
-          echo "Глобальные настройки SDK 36 успешно применены!"
       - name: Get Flutter packages
         script: |
           flutter packages pub get
       - name: Build Flutter APK
         script: |
+          # Прокидываем флаг игнорирования проверки AAR в свойства Gradle
+          mkdir -p android && echo "android.experimental.lifecycle.skipAarMetadataCheck=true" >> android/gradle.properties
           flutter build apk --release --no-shrink --android-skip-build-dependency-validation
     artifacts:
       - build/app/outputs/flutter-apk/*.apk
